@@ -27,8 +27,8 @@ Game::Game(int width, int height, string initValue)
 	player[1].setSymbol("o");
 	currentPlayer = &player[0];
 
-	scoreTable.insert(pair<string, int>("x", 10));
-	scoreTable.insert(pair<string, int>("o", -10));
+	scoreTable.insert(pair<string, int>("x", 1));
+	scoreTable.insert(pair<string, int>("o", -1));
 	scoreTable.insert(pair<string, int>("Tie", 0));
 }
 
@@ -55,6 +55,7 @@ void Game::run()
 		}
 		else if (available == 0) {
 			cout << endl << ">Result: " << "Tie" << endl;
+			draw();
 			Sleep(10000);
 		}
 		draw();
@@ -97,7 +98,7 @@ void Game::nextTurn()
 		return;
 
 	//Computer = Player_1
-	int bestScore = 0;
+	int bestScore = INT_MIN;
 	Point bestMove;
 	int alpha = INT_MIN;
 	int beta = INT_MAX;
@@ -109,7 +110,7 @@ void Game::nextTurn()
 				board.matrix[i][j] = currentPlayer->getSymbol();
 				int score = minimax(board, alpha, beta,0,false);
 				board.matrix[i][j] = initValue;
-				if (score >= bestScore) {
+				if (score > bestScore) {
 					bestScore = score;
 					bestMove.row = i;
 					bestMove.col = j;
@@ -134,7 +135,7 @@ int Game::minimax(Board& b,int& alpha, int& beta, int depth, bool isMaximizing)
 		
 		itr = scoreTable.find(winner->getSymbol());
 		score = itr->second;
-		return score - depth;
+		return score;
 		
 	}
 	else if (available == 0 && winner == NULL) {
@@ -160,8 +161,8 @@ int Game::minimax(Board& b,int& alpha, int& beta, int depth, bool isMaximizing)
 					bestScore = score > bestScore ? score: bestScore;
 					//alpha = max(alpha, score)
 					alpha = alpha > score ? alpha : score;
-					/*if (beta <= alpha)
-						break;*/
+					if (beta <= alpha)
+						break;
 				}
 			}
 		}
@@ -186,8 +187,8 @@ int Game::minimax(Board& b,int& alpha, int& beta, int depth, bool isMaximizing)
 					bestScore = score > bestScore ? bestScore : score;
 					//beta = min(score,beta)
 					beta = score > beta ? beta : score;
-					/*if (beta <= alpha)
-						break;*/
+					if (beta <= alpha)
+						break;
 				}
 			}
 		}
