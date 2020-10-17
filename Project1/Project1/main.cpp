@@ -18,6 +18,7 @@ int main() {
 			Game tic(3, 3, s);
 			tic.run();
 			cout << "End game" << endl;
+			Sleep(10000);
 		}
 		system("cls");
 	}

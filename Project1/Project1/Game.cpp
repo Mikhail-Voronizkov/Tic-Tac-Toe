@@ -19,6 +19,9 @@ Game::Game(int width, int height, string initValue)
 			board.matrix[i][j] = initValue;
 		}
 	}
+	/*board.matrix[0][2] = "x";
+	board.matrix[1][1] = "x";
+	board.matrix[2][0] = "x";*/
 	available = width * height;
 
 	player[0].setName("Player_1");
@@ -27,8 +30,8 @@ Game::Game(int width, int height, string initValue)
 	player[1].setSymbol("o");
 	currentPlayer = &player[0];
 
-	scoreTable.insert(pair<string, int>("x", 1));
-	scoreTable.insert(pair<string, int>("o", -1));
+	scoreTable.insert(pair<string, int>("x", 10));
+	scoreTable.insert(pair<string, int>("o", -10));
 	scoreTable.insert(pair<string, int>("Tie", 0));
 }
 
@@ -36,7 +39,18 @@ void Game::run()
 {
 	Player* winner = NULL;
 
-	while (available > 0 && winner == NULL) {
+	while (winner == NULL) {
+		winner = checkWinner();
+		if (winner != NULL) {
+			cout << endl << ">Result: " << winner->getName() << endl;
+			draw();
+			break;
+		}
+		else if (available == 0) {
+			cout << endl << ">Result: " << "Tie" << endl;
+			draw();
+			break;
+		}
 
 		cout <<"It's "<< currentPlayer->getName() <<"'s turn" << endl;
 		
@@ -48,22 +62,9 @@ void Game::run()
 			input();
 		}
 
-		winner = checkWinner();
-		if (winner != NULL) {
-			cout << endl << ">Result: " << winner->getName() << endl;
-			Sleep(10000);
-		}
-		else if (available == 0) {
-			cout << endl << ">Result: " << "Tie" << endl;
-			draw();
-			Sleep(10000);
-		}
 		draw();
 	}
 	
-
-	/*cout << "winner: " << winner->getName() << endl;
-	cout << "End game" << endl;*/
 }
 
 void Game::input()
@@ -98,7 +99,7 @@ void Game::nextTurn()
 		return;
 
 	//Computer = Player_1
-	int bestScore = INT_MIN;
+	int bestScore = 0;
 	Point bestMove;
 	int alpha = INT_MIN;
 	int beta = INT_MAX;
@@ -110,7 +111,7 @@ void Game::nextTurn()
 				board.matrix[i][j] = currentPlayer->getSymbol();
 				int score = minimax(board, alpha, beta,0,false);
 				board.matrix[i][j] = initValue;
-				if (score > bestScore) {
+				if (score >= bestScore) {
 					bestScore = score;
 					bestMove.row = i;
 					bestMove.col = j;
@@ -135,7 +136,7 @@ int Game::minimax(Board& b,int& alpha, int& beta, int depth, bool isMaximizing)
 		
 		itr = scoreTable.find(winner->getSymbol());
 		score = itr->second;
-		return score;
+		return score - depth;
 		
 	}
 	else if (available == 0 && winner == NULL) {
@@ -161,8 +162,8 @@ int Game::minimax(Board& b,int& alpha, int& beta, int depth, bool isMaximizing)
 					bestScore = score > bestScore ? score: bestScore;
 					//alpha = max(alpha, score)
 					alpha = alpha > score ? alpha : score;
-					if (beta <= alpha)
-						break;
+					/*if (beta <= alpha)
+						break;*/
 				}
 			}
 		}
@@ -187,8 +188,8 @@ int Game::minimax(Board& b,int& alpha, int& beta, int depth, bool isMaximizing)
 					bestScore = score > bestScore ? bestScore : score;
 					//beta = min(score,beta)
 					beta = score > beta ? beta : score;
-					if (beta <= alpha)
-						break;
+					/*if (beta <= alpha)
+						break;*/
 				}
 			}
 		}
@@ -203,97 +204,132 @@ int Game::minimax(Board& b,int& alpha, int& beta, int depth, bool isMaximizing)
 //who has 3 in the same line is the winner
 Player* Game::checkWinner()
 {
-	string symbol[2];
-	symbol[0] = "x";
-	symbol[0] = "o";
-	bool win = false;
+	Player* winner = NULL;
 	int count = 0;
 	int i = 0;
 	int j = 0;
 
 	//Horizontal check
-	for (i = 0; i < board.getHeight(); i++) {
-		for (j = 0; j < board.getWidth() - 1; j++) {
-			if (board.matrix[i][j] == initValue || board.matrix[i][j] != board.matrix[i][j + 1]) {
-				count = 0;
-				continue;
-			}
-			
-			count++;
-			if (count >= 2) {
-				for (int k = 0; k < 2; k++) {
-					if (board.matrix[i][j] == player[k].getSymbol())
-						return &player[k];
-				}
-			}
-			
-		}
-		count = 0;
-	}
+	if(winner == NULL)
+		winner = checkHorizontal(board.getWidth(), board.getHeight());
+		
 	//Vertical check
-	for (i = 0; i < board.getWidth(); i++) {
-		for (j = 0; j < board.getHeight() - 1; j++) {
-			if (board.matrix[j][i] == initValue || board.matrix[j][i] != board.matrix[j + 1][i]) {
+	if(winner == NULL)
+		winner = checkVertical(board.getWidth(), board.getHeight());
+	
+
+	//Diagonal check (3 x 3), for bigger board -> update later
+	if (winner == NULL)
+		winner = checkDiagonal(board.getWidth(), board.getHeight());
+	
+	return winner;
+}
+
+Player* Game::checkHorizontal(int first_dimensional, int second_dimensional)
+{
+	for (int k = 0; k < 2; k++) {
+		if(check_Horizontal_Line(board.getWidth(), board.getHeight(),3, player[k].getSymbol()))
+			return &player[k];
+	}
+	return NULL;
+}
+
+Player* Game::checkVertical(int first_dimensional, int second_dimensional)
+{
+	for (int k = 0; k < 2; k++) {
+		if (check_Vertical_Line(board.getWidth(), board.getHeight(), 3, player[k].getSymbol()))
+			return &player[k];
+	}
+	return NULL;
+}
+
+Player* Game::checkDiagonal(int first_dimensional, int second_dimensional)
+{
+	for (int k = 0; k < 2; k++) {
+		if (check_Diagonal_Line(board.getWidth(), board.getHeight(), 3, player[k].getSymbol()))
+			return &player[k];
+	}
+	return NULL;
+}
+
+int Game::available_winning_move(Player& player)
+{
+	int count = 0;
+
+	return count;
+}
+
+bool Game::check_Horizontal_Line(int first_dimensional, int second_dimensional, int length, string symbol)
+{
+	int count = 0;
+	for (int i = 0; i < first_dimensional; i++) {
+		for (int j = 0; j < second_dimensional; j++) {
+			if (board.matrix[i][j] != symbol) {
 				count = 0;
 				continue;
 			}
 
 			count++;
-			if (count >= 2) {
-				for (int k = 0; k < 2; k++) {
-					if (board.matrix[j][i] == player[k].getSymbol())
-						return &player[k];
-				}
+			if (count >= length && board.matrix[i][j] == symbol) {
+				return true;
 			}
 		}
 		count = 0;
 	}
-	//Diagonal check (3 x 3), for bigger board -> update later
-	/*for (i = 0, j = 0; i < board.getHeight() - 1, j < board.getWidth() - 1; i++, j++) {
-		if (board.matrix[i][j] == initValue || board.matrix[i][j] != board.matrix[i + 1][j + 1]) {
+	return false;
+}
+
+bool Game::check_Vertical_Line(int first_dimensional, int second_dimensional, int length, string symbol)
+{
+	int count = 0;
+	for (int i = 0; i < first_dimensional; i++) {
+		for (int j = 0; j < second_dimensional; j++) {
+			if (board.matrix[j][i] != symbol) {
+				count = 0;
+				continue;
+			}
+
+			count++;
+			if (count >= length && board.matrix[j][i] == symbol) {
+				return true;
+			}
+		}
+		count = 0;
+	}
+	return false;
+}
+
+bool Game::check_Diagonal_Line(int first_dimensional, int second_dimensional, int length, string symbol)
+{
+	int i = 0;
+	int j = 0;
+	int count = 0;
+
+	for (i = 0, j = 0; i < second_dimensional, j < first_dimensional; i++, j++) {
+		if (board.matrix[i][j] != symbol) {
 			count = 0;
 			continue;
 		}
 
 		count++;
-		if (count >= 2) {
-			for (int k = 0; k < 2; k++) {
-				if (board.matrix[i][j] == player[k].getSymbol())
-					return &player[k];
-			}
+		if (count >= length) {
+			return true;
 		}
-		count = 0;
 	}
 
-	for (i = 0, j = board.getWidth() - 1; i < board.getHeight() - 1, j > 0; i++, j--) {
-		if (board.matrix[i][j] == initValue || board.matrix[i][j] != board.matrix[i + 1][j - 1]) {
+	count = 0;
+	for (i = 0, j = first_dimensional - 1; i < second_dimensional, j >= 0; i++, j--) {
+		if (board.matrix[i][j] != symbol) {
 			count = 0;
 			continue;
 		}
 
 		count++;
-		if (count >= 2) {
-			cout << "There is a winner" << endl;
-			for (int k = 0; k < 2; k++) {
-				if (board.matrix[i][j] == player[k].getSymbol())
-					return &player[k];
-			}
+		if (count >= length) {
+			return true;
 		}
-		count = 0;
-	}*/
-
-	for (int k = 0; k < 2; k++) {
-		if ((board.matrix[0][0] == board.matrix[1][1])
-			&& (board.matrix[1][1] == board.matrix[2][2])
-			&& (board.matrix[2][2] == player[k].getSymbol()))
-			return &player[k];
-		else if ((board.matrix[0][2] == board.matrix[1][1])
-				&& (board.matrix[1][1] == board.matrix[2][0])
-				&& (board.matrix[2][0] == player[k].getSymbol()))
-			return &player[k];
 	}
-	
-	return NULL;
+	return false;
 }
 
 void Game::draw()
